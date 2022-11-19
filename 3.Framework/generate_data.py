@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 opt = cfg.get_options()
-data_path = f"data/benchmark/{opt.dataset}"
+data_path = f"data/benchmark/{opt.dataset}.txt"
 
 def compute_class_info(labels):
     """
