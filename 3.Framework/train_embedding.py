@@ -1,4 +1,6 @@
 import logging
+
+import keras
 import time
 
 import torch
@@ -16,9 +18,8 @@ import joblib
 import utils.eval as eva
 import config.config as cfg
 
-opt = cfg.get_options()
-
 from torch.utils.tensorboard import SummaryWriter
+from utils.plot import plot_scatter, eval_plot
 
 def train(epoch, train_loader, models, criterions, miner, optimizers, device, opt):
     models.train()
@@ -40,7 +41,8 @@ def train(epoch, train_loader, models, criterions, miner, optimizers, device, op
         classification_loss = criterions[0](output, target)
         pairs = miner(embedding, target)
         metric_loss = criterions[1](embedding, target, pairs)
-        loss = classification_loss + metric_loss
+        loss = classification_loss + 0.5 * metric_loss
+        # loss = metric_loss
         
         # compute gradient and SGD step
         optimizers.zero_grad()
@@ -98,12 +100,37 @@ def save(models, scaler, opt):
     torch.save(models, model_path)
     joblib.dump(scaler, scaler_path)
 
-def main():
+def main(layer_sizes, opt):
+    # load data
+    data_path = f"./data/init/{opt.dataset}.npy"
+
+    data = np.load(data_path, allow_pickle=False).astype('float32')
+    np.random.shuffle(data)
+
+    # Standardscaler or norminalizer
+    X = data[:,:-2]
+    Y = data[:,-2:].astype(np.int64)
+
+    scaler = Normalizer().fit(X)
+    # scaler = StandardScaler().fit(X)
+    X = scaler.transform(X)
+
+    plot_scatter(X[:,0], X[:,1], np.ones(X.shape[0]), Y[:,0] * 52)
+
+    # data = torch.from_numpy(data)
+    train_num = int(X.shape[0] * opt.train_eval_ratio)
+    train_dataset = DataSet(X[:train_num], Y[:train_num])
+    eval_dataset = DataSet(X[train_num:], Y[train_num:])
+    print(len(train_dataset), len(eval_dataset))
+
+    # dataloader
+    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=4)
+    eval_dataloader = DataLoader(eval_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=4)
+
     # device : cuda or cpu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # create model
-    layer_sizes = [[2,4,8],[8,4],[4,4]]
     models = BaseModel(layer_sizes)
     
     models.to(device)
@@ -116,35 +143,13 @@ def main():
     # classification loss
     classification_loss = torch.nn.CrossEntropyLoss()
     
-    # metric loss & miner 
-    metric_loss = losses.TripletMarginLoss(margin=0.1)
+    # metric loss & miner
+    metric_loss = losses.MultiSimilarityLoss()
+    # metric_loss = losses.TripletMarginLoss(margin=0.1)
     miner = miners.MultiSimilarityMiner(epsilon=0.1)
     
     criterions = [classification_loss, metric_loss]
-    
-    # load data
-    data_path = f"./data/init/{opt.dataset}.npy"
-    
-    data = np.load(data_path, allow_pickle=False).astype('float32')
-    np.random.shuffle(data)
 
-    # Standardscaler or norminalizer
-    X = data[:,:-2]
-    Y = data[:,-2:].astype(np.int64)
-
-    scaler = Normalizer().fit(X)
-    X = scaler.transform(X)
-
-    # data = torch.from_numpy(data)
-    train_num = int(X.shape[0] * opt.train_eval_ratio)
-    train_dataset = DataSet(X[:train_num], Y[:train_num])
-    eval_dataset = DataSet(X[train_num:], Y[train_num:])
-    print(len(train_dataset), len(eval_dataset))
-    
-    # dataloader
-    train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2)
-    eval_dataloader = DataLoader(eval_dataset, batch_size=opt.batch_size, shuffle=True, num_workers=2,)
-    
     # tensorboard
     writer = SummaryWriter()
     for epoch in range(opt.start_epoch, opt.epochs):
@@ -161,5 +166,8 @@ def main():
     save(models, scaler, opt)
 
 if __name__=="__main__":
-    main()
+    opt = cfg.get_options()
+    layer_sizes = [[2,4,16],[16,8],[8,4]]
+    # layer_sizes = [[9,32,64],[64,16],[16,7]]
+    main(layer_sizes, opt)
     print('finish')

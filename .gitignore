@@ -1,2 +1,10 @@
 .ipynb_checkpoints
 3.Framework/utils/__pycache__
+3.Framework/data/
+3.Framework/model/
+3.Framework/result/
+3.Framework/runs/
+3.Framework/config/__pycache__/
+3.Framework/net/__pycache__/
+3.Framework/loss/.ipynb_checkpoints
+.idea
