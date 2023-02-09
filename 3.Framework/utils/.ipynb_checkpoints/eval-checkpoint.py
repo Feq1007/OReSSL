@@ -2,7 +2,7 @@ from __future__ import print_function, absolute_import
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics.cluster import normalized_mutual_info_score
-
+import torch
 
 __all__ = ['accuracy']
 
@@ -19,7 +19,7 @@ def accuracy(output, target, topk=(1,)):
     for k in topk:
         correct_k = correct[:k].reshape(correct[:k].size()[0]*correct[:k].size()[1]).float().sum(0)
         res.append(correct_k.mul_(100.0 / batch_size))
-    return res
+    return torch.Tensor(res)
 
 def evaluation(X, Y, Kset):
     num = X.shape[0]

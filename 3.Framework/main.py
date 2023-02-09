@@ -1,24 +1,23 @@
 import argparse
+import logging
 import time
+from collections import Counter
 
-from torch.utils.data import DataLoader
-
-import config.config as cfg
 import joblib
 import numpy as np
 import pandas as pd
-
 import torch
-from utils.data import DataSet
-from net.mc import MicroCluster
-from collections import Counter
 from scipy.special import softmax
 from sklearn.cluster import KMeans
 from sklearn.metrics import classification_report
 from sklearn.metrics.pairwise import euclidean_distances
 from tensorboardX import SummaryWriter
+from torch.utils.data import DataLoader
+
+import config.config as cfg
 from net.base import NoModel
-import logging
+from net.mc import MicroCluster
+from utils.data import DataSet
 
 
 class OnlineLearning(object):
@@ -75,7 +74,7 @@ class OnlineLearning(object):
             self.decay_time()
 
             if (i + 1) % 1000 == 0:
-                self.describe(i+1)
+                self.describe(i + 1)
 
         end = time.time()
         print("total cost time: {cost:.3f}s".format(cost=end - start))
@@ -352,7 +351,7 @@ class OnlineLearning(object):
 
     def save_result(self):
         out_path = f"./result/{self.args.dataset}.npy"
-        data = np.hstack([np.array(self.label_true).reshape((-1,1)), np.array(self.label_predict).reshape((-1,1))])
+        data = np.hstack([np.array(self.label_true).reshape((-1, 1)), np.array(self.label_predict).reshape((-1, 1))])
         np.save(out_path, data)
 
 
