@@ -1,3 +1,6 @@
 .runs/
 .data/
 .model/
+data/
+config/__pycache__/
+utils/__pycache__/
